@@ -1,0 +1,65 @@
+RewriteEngine On
+
+# Configuración de seguridad para el admin
+ServerSignature Off
+Options -Indexes
+
+# Headers de seguridad adicionales para el admin
+<IfModule mod_headers.c>
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Configurar manejo de errores PHP
+php_flag display_errors off
+php_flag log_errors on
+
+# Permitir acceso a archivos estáticos del admin
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^(public|assets)/ - [L]
+
+# Permitir acceso directo a la API del admin
+RewriteRule ^app/api/ - [L]
+
+# Redirigir todas las demás peticiones al index.php del admin
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/admin/(app/api|public|assets)/
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Seguridad: Denegar acceso directo a archivos PHP de Controllers y Views
+<Files "*.php">
+    <RequireAll>
+        Require all denied
+    </RequireAll>
+</Files>
+
+# Permitir solo el index.php y archivos de API
+<Files "index.php">
+    Require all granted
+</Files>
+
+<Files "debug.php">
+    Require all granted
+</Files>
+
+<FilesMatch "^app/api/.*\.php$">
+    Require all granted
+</FilesMatch>
+
+# Denegar acceso a archivos de configuración y logs
+<FilesMatch "\.(env|log|ini|conf)$">
+    Require all denied
+</FilesMatch>
+
+# Proteger directorios sensibles
+<DirectoryMatch "^.*/app/(Controllers|Views|Config)/">
+    Require all denied
+</DirectoryMatch>
+
+# Tiempo de vida de sesión más corto para admin (30 minutos)
+php_value session.gc_maxlifetime 1800
+php_value session.cookie_lifetime 1800
