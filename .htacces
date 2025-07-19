@@ -1,0 +1,188 @@
+# .htaccess - Configuración corregida para JG Moda
+# Versión compatible con la mayoría de hostings
+
+# =====================================================
+# CONFIGURACIÓN BÁSICA
+# =====================================================
+
+# Habilitar el motor de reescritura
+RewriteEngine On
+
+# Establecer la base para las redirecciones
+RewriteBase /
+
+# =====================================================
+# SEGURIDAD
+# =====================================================
+
+# Prevenir acceso a archivos sensibles
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|sql|conf|config)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Proteger archivos de configuración específicos
+<Files "config.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+<Files "diagnostic.php">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
+# Bloquear acceso a directorios del sistema
+RedirectMatch 404 /\.git
+RedirectMatch 404 /\.env
+RedirectMatch 404 /composer\.(json|lock)
+RedirectMatch 404 /package\.(json|lock)
+
+# Headers de seguridad (solo si mod_headers está disponible)
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always append X-Frame-Options DENY
+    
+    # Prevenir MIME type sniffing
+    Header set X-Content-Type-Options nosniff
+    
+    # XSS Protection
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Referrer Policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    
+    # Remove server signature (si está permitido)
+    Header unset Server
+    Header unset X-Powered-By
+</IfModule>
+
+# =====================================================
+# REDIRECCIONES Y URL REWRITING
+# =====================================================
+
+# Redirigir index.php a la raíz
+RewriteCond %{THE_REQUEST} /index\.php(\?[^\s]*)?[\s?] [NC]
+RewriteRule ^index\.php$ / [R=301,L]
+
+# Redirección principal: enviar todo al index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !^/(admin|api)/ 
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# =====================================================
+# CONFIGURACIÓN DE ARCHIVOS ESTÁTICOS
+# =====================================================
+
+# Configurar expiración de archivos estáticos (solo si mod_expires está disponible)
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Imágenes
+    ExpiresByType image/jpg "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS y JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType application/x-javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+    
+    # Otros archivos
+    ExpiresByType application/pdf "access plus 1 month"
+    ExpiresByType text/html "access plus 1 hour"
+</IfModule>
+
+# =====================================================
+# COMPRESIÓN GZIP
+# =====================================================
+
+<IfModule mod_deflate.c>
+    # Comprimir archivos de texto
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/xml
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# =====================================================
+# CONFIGURACIÓN DE TIPOS MIME
+# =====================================================
+
+<IfModule mod_mime.c>
+    # JavaScript
+    AddType application/javascript .js
+    AddType application/json .json
+    
+    # Imágenes
+    AddType image/webp .webp
+    AddType image/svg+xml .svg
+</IfModule>
+
+# =====================================================
+# CONFIGURACIÓN DE UPLOADS
+# =====================================================
+
+# Proteger directorio de uploads
+<IfModule mod_rewrite.c>
+    # Bloquear ejecución de scripts en uploads
+    RewriteCond %{REQUEST_URI} ^/uploads/.*\.(php|php3|php4|php5|phtml|pl|py|jsp|asp|sh|cgi)$ [NC]
+    RewriteRule .* - [F]
+</IfModule>
+
+# =====================================================
+# CONFIGURACIÓN DE ERRORES
+# =====================================================
+
+# Páginas de error personalizadas
+ErrorDocument 404 /404
+ErrorDocument 500 /500
+ErrorDocument 403 /403
+
+# =====================================================
+# CONFIGURACIÓN DE CACHE
+# =====================================================
+
+<IfModule mod_headers.c>
+    # Cache para archivos estáticos
+    <FilesMatch "\.(ico|pdf|jpg|jpeg|png|gif|js|css|webp|svg)$">
+        Header set Cache-Control "max-age=2592000, public"
+    </FilesMatch>
+    
+    # No cache para páginas dinámicas
+    <FilesMatch "\.(php|html|htm)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires 0
+    </FilesMatch>
+</IfModule>
+
+# =====================================================
+# CONFIGURACIÓN ESPECÍFICA POR AMBIENTE
+# =====================================================
+
+# Mostrar errores solo en desarrollo (si el hosting lo permite)
+<IfModule mod_setenvif.c>
+    SetEnvIf Host "localhost" DEVELOPMENT
+    SetEnvIf Host "\.local$" DEVELOPMENT
+    SetEnvIf Host "\.dev$" DEVELOPMENT
+</IfModule>
+
+# =====================================================
+# FINAL
+# =====================================================
+
+# Fin de la configuración
